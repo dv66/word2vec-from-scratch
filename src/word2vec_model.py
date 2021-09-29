@@ -59,8 +59,6 @@ def skip_gram_loss(outputs, targets, word2vec: Word2VecDataset):
                 nn.functional.sigmoid(- torch.dot(torch.Tensor(neg_sample).cuda(), hidden_layer_center_word_output_vector)))
         losses[i] = - first_term - second_term
 
-    # print(losses)
-
     return torch.mean(losses)
 
 
