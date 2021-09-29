@@ -44,6 +44,15 @@ class Word2VecDataset:
         negative_sample_index = random.choice(self.unigram_table)
         return self.distinct_words[negative_sample_index]
 
+    def get_k_negative_samples(self, k, input_word):
+        k_samples = []
+        for i in range(k):
+            k_samples.append(
+                (self.get_one_hot_vector([input_word]), self.get_one_hot_vector([self.get_negative_sample()]))
+            )
+        return k_samples
+
+
     def get_one_hot_vector(self, wordlist: list):
         vector = np.zeros(self.vocabulary_size)
         for word in wordlist:
@@ -89,7 +98,7 @@ class Word2VecDataset:
 
 if __name__ == '__main__':
     word2vec = Word2VecDataset('../sentences-small.txt')
-    for i in range(100):
-        print(word2vec.get_negative_sample())
+
+    print(word2vec.get_k_negative_samples(5, 'মানুষেরা'))
     # Word2VecDataset.generate_target_context_pairs(3, '../sentences-small.txt', '../target-context.txt')
     # [print(x) for x in Word2VecDataset.get_target_context_pairs(3, 'অনেক সময় সহজ জিনিসগুলো নার্ভাসনেসের কারণে ভুলে যাই')]
