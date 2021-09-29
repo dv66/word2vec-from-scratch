@@ -44,11 +44,11 @@ class Word2VecDataset:
         negative_sample_index = random.choice(self.unigram_table)
         return self.distinct_words[negative_sample_index]
 
-    def get_k_negative_samples(self, k, input_word):
+    def get_k_negative_samples(self, k):
         k_samples = []
         for i in range(k):
             k_samples.append(
-                (self.get_one_hot_vector([input_word]), self.get_one_hot_vector([self.get_negative_sample()]))
+                self.get_one_hot_vector([self.get_negative_sample()])
             )
         return k_samples
 

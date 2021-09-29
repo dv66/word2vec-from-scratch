@@ -1,26 +1,26 @@
 from __future__ import print_function
 import argparse
 import linecache
-
+from torch.utils.tensorboard import SummaryWriter
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
-
 from word2vec_preprocess import Word2VecDataset
 
+writer = SummaryWriter()
 
 class SkipGramDataset(torch.utils.data.Dataset):
-    def __init__(self, file_name, word2vec : Word2VecDataset):
+    def __init__(self, file_name, word2vec: Word2VecDataset):
         self._file_name = file_name
         self._word2vec = word2vec
         with open(file_name) as f:
             self._total_data = len(f.readlines()) - 1
 
     def __getitem__(self, index):
-        line = linecache.getline(self._file_name, index+1)
+        line = linecache.getline(self._file_name, index + 1)
         X, y = line.strip().split()
         X = self._word2vec.get_one_hot_vector([X])
         y = self._word2vec.get_one_hot_vector([y])
@@ -42,31 +42,47 @@ class Word2VecNN(nn.Module):
         return self.hidden(x)
 
 
+def skip_gram_loss(outputs, targets, word2vec: Word2VecDataset):
+    losses = torch.zeros(len(outputs)).cuda()
+    for i in range(len(outputs)):
+        context_word_vector = targets[i]
+        hidden_layer_center_word_output_vector = outputs[i]
+        # print(hidden_layer_center_word_output_vector)
+
+        first_term = - torch.log2(
+            torch.nn.functional.sigmoid(torch.dot(context_word_vector, hidden_layer_center_word_output_vector)))
+        k_negative_samples = word2vec.get_k_negative_samples(k=5)
+        second_term = 0.0
+        for neg_sample in k_negative_samples:
+            # print(torch.Tensor(neg_sample).cuda())
+            second_term += torch.log2(
+                nn.functional.sigmoid(- torch.dot(torch.Tensor(neg_sample).cuda(), hidden_layer_center_word_output_vector)))
+        losses[i] = - first_term - second_term
+
+    # print(losses)
+
+    return torch.mean(losses)
 
 
-
-def train(args, model, device, train_loader, optimizer, epoch):
+def train(args, model, device, train_loader, optimizer, epoch, word2vec_data):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
-        print(f"total outputs = {len(output)}")
-        print(f"output_dim = {len(output[0])}")
-        print(output)
-        print(target)
-        loss_func = nn.LogSoftmax()
-        loss = loss_func(output, target)
+        # print(f"total outputs = {len(output)}")
+        # print(f"output_dim = {len(output[0])}")
+        # print(output)
+        # print(target)
+        loss = skip_gram_loss(output, target, word2vec_data)
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item()))
+                       100. * batch_idx / len(train_loader), loss.item()))
             if args.dry_run:
                 break
-
-
 
 
 def main():
@@ -108,10 +124,10 @@ def main():
         train_kwargs.update(cuda_kwargs)
         test_kwargs.update(cuda_kwargs)
 
-    transform=transforms.Compose([
+    transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
-        ])
+    ])
 
     word2vec = Word2VecDataset('../sentences-small.txt')
     Word2VecDataset.generate_target_context_pairs(3, '../sentences-small.txt', '../target-context.txt')
@@ -120,18 +136,18 @@ def main():
         dataset, batch_size=10
     )
 
-
     input_dimension = len(dataset[0][0])
     WORD_VECTOR_DIMENSION = 300
-    LEARNING_RATE = 0.01
+    LEARNING_RATE = 0.001
 
     model = Word2VecNN(input_dimension, WORD_VECTOR_DIMENSION).to(device)
     optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE)
 
     for epoch in range(1, args.epochs + 1):
-        train(args, model, device, data_loader, optimizer, epoch)
+        train(args, model, device, data_loader, optimizer, epoch, word2vec)
 
-
+    if args.save_model:
+        torch.save(model.state_dict(), "word2vec_trained.pt")
 
 
 if __name__ == '__main__':
