@@ -1,27 +1,32 @@
 import random
-
+import pickle
 import numpy as np
 import collections
 
 
 class Word2VecDataset:
 
-    def __init__(self, file_path):
-        self.file = open(file_path)
-        self.distinct_words = self.get_distinct_words(self.file)
+    def __init__(self, file_path, is_pickle=False):
+        self.distinct_words = []
+        if is_pickle:
+            self.distinct_words = pickle.load(open(file_path, 'rb'))['distinct_words']
+        else:
+            self.file = open(file_path)
+            self.extract_distinct_words()
+            self.save_word_data(f'{file_path}.pkl')
         self.vocabulary_size = len(self.distinct_words)
         self.word_index_dict = dict([(self.distinct_words[i], i) for i in range(len(self.distinct_words))])
         self.unigram_table = self.get_unigram_table_neg_sampling(smoothing_parameter=3/4)
 
-    @staticmethod
-    def get_distinct_words(file):
-        words = []
-        for sentence in file:
-            for word in sentence.strip().split():
-                words.append(word)
-        words = list(set(words))
 
-        return words
+    def get_distinct_words(self):
+        return self.distinct_words
+
+
+    def extract_distinct_words(self):
+        for sentence in self.file:
+            for word in sentence.strip().split():
+                self.distinct_words.append(word)
 
     def get_unigram_table_neg_sampling(self, smoothing_parameter=3/4):
         total_words = len(self.distinct_words)
@@ -48,14 +53,13 @@ class Word2VecDataset:
         k_samples = []
         for i in range(k):
             k_samples.append(
-                self.get_one_hot_vector([self.get_negative_sample()])
+                self.get_one_hot_vector(self.get_negative_sample())
             )
         return k_samples
 
-    def get_one_hot_vector(self, wordlist: list):
+    def get_one_hot_vector(self, word: str):
         vector = np.zeros(self.vocabulary_size)
-        for word in wordlist:
-            vector[self.word_index_dict[word]] = 1.0
+        vector[self.word_index_dict[word]] = 1.0
 
         return vector.astype(np.float32)
 
@@ -94,10 +98,19 @@ class Word2VecDataset:
 
         open(output_file_path, 'w').write('\n'.join(output_pairs))
 
+    def save_word_data(self, pickle_file):
+        word_data = {
+            'distinct_words': self.distinct_words
+        }
+        with open(pickle_file, 'wb') as f:
+            pickle.dump(word_data, f)
+
+
+
 
 if __name__ == '__main__':
-    word2vec = Word2VecDataset('../sentences-small.txt')
+    # word2vec = Word2VecDataset('../out/sentences-small-2.txt')
+    word2vec = Word2VecDataset('../out/sentences-small-2.txt.pkl', is_pickle=True)
+    print(len(word2vec.get_distinct_words()))
+    print(word2vec.get_one_hot_vector('স্ন্যাপচ্যাটে'))
 
-    print(word2vec.get_k_negative_samples(5, 'মানুষেরা'))
-    # Word2VecDataset.generate_target_context_pairs(3, '../sentences-small.txt', '../target-context.txt')
-    # [print(x) for x in Word2VecDataset.get_target_context_pairs(3, 'অনেক সময় সহজ জিনিসগুলো নার্ভাসনেসের কারণে ভুলে যাই')]

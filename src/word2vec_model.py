@@ -22,8 +22,8 @@ class SkipGramDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         line = linecache.getline(self._file_name, index + 1)
         X, y = line.strip().split()
-        X = self._word2vec.get_one_hot_vector([X])
-        y = self._word2vec.get_one_hot_vector([y])
+        X = self._word2vec.get_one_hot_vector(X)
+        y = self._word2vec.get_one_hot_vector(y)
         return torch.from_numpy(X), torch.from_numpy(y)
 
     def __len__(self):
@@ -43,24 +43,15 @@ class Word2VecNN(nn.Module):
         return self.hidden(x)
 
 def skip_gram_loss(outputs, targets, word2vec: Word2VecDataset):
-    # normalize
-    # for i in range(len(outputs)):
-    #     outputs[i] = nn.functional.normalize(outputs[i], p=2, dim=-1)
-
     losses = torch.zeros(len(outputs)).cuda()
     for i in range(len(outputs)):
         context_word_vector = targets[i]
         hidden_layer_center_word_output_vector = outputs[i]
-        # print(hidden_layer_center_word_output_vector)
-
-        first_term = torch.log2(
-            torch.nn.functional.sigmoid(torch.dot(context_word_vector, hidden_layer_center_word_output_vector)))
+        first_term = torch.log2(torch.nn.functional.sigmoid(torch.dot(context_word_vector, hidden_layer_center_word_output_vector)))
         k_negative_samples = word2vec.get_k_negative_samples(k=5)
         second_term = 0.0
         for neg_sample in k_negative_samples:
-            # print(torch.Tensor(neg_sample).cuda())
-            second_term += torch.log2(
-                nn.functional.sigmoid(- torch.dot(torch.Tensor(neg_sample).cuda(), hidden_layer_center_word_output_vector)))
+            second_term += torch.log2(nn.functional.sigmoid(- torch.dot(torch.Tensor(neg_sample).cuda(), hidden_layer_center_word_output_vector)))
         losses[i] = - first_term - second_term
 
     return torch.mean(losses)
@@ -87,13 +78,15 @@ def train(args, model, device, train_loader, optimizer, epoch, word2vec_data):
 def main():
     # Training settings
     parser = argparse.ArgumentParser(description='Word2VecDataset Implementation from scratch')
+    parser.add_argument('--word-vector-dimension', type=int, default=300, required=True,
+                        help='dimension of word embedding')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
     parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
                         help='input batch size for testing (default: 1000)')
     parser.add_argument('--epochs', type=int, default=20, metavar='N',
                         help='number of epochs to train (default: 14)')
-    parser.add_argument('--lr', type=float, default=1.0, metavar='LR',
+    parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                         help='learning rate (default: 1.0)')
     parser.add_argument('--gamma', type=float, default=0.7, metavar='M',
                         help='Learning rate step gamma (default: 0.7)')
@@ -105,7 +98,7 @@ def main():
                         help='random seed (default: 1)')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='how many batches to wait before logging training status')
-    parser.add_argument('--save-model', action='store_true', default=False,
+    parser.add_argument('--save-model', action='store_true', default=True,
                         help='For Saving the current Model')
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
@@ -128,32 +121,30 @@ def main():
         transforms.Normalize((0.1307,), (0.3081,))
     ])
 
-    word2vec = Word2VecDataset('../sentences-small-1.txt')
+    word2vec = Word2VecDataset('../out/sentences-small-1.txt')
     Word2VecDataset.generate_target_context_pairs(
                         window=3,
-                        input_file_path='../sentences-small-1.txt',
-                        output_file_path='../target-context.txt'
+                        input_file_path='../out/sentences-small-1.txt',
+                        output_file_path='../out/target-context.txt'
                     )
 
-    dataset = SkipGramDataset('../target-context.txt', word2vec)
+    dataset = SkipGramDataset('../out/target-context.txt', word2vec)
 
     data_loader = torch.utils.data.DataLoader(
         dataset, batch_size=args.batch_size
     )
 
     input_dimension = len(dataset[0][0])
-    WORD_VECTOR_DIMENSION = 300
-    LEARNING_RATE = 0.01
 
-    model = Word2VecNN(input_dimension, WORD_VECTOR_DIMENSION).to(device)
-    optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE)
+    model = Word2VecNN(input_dimension, args.word_vector_dimension).to(device)
+    optimizer = optim.SGD(model.parameters(), lr=args.lr)
 
     for epoch in range(1, args.epochs + 1):
         train(args, model, device, data_loader, optimizer, epoch, word2vec)
     writer.flush()
 
     if args.save_model:
-        torch.save(model.state_dict(), "word2vec_trained.pt")
+        torch.save(model.state_dict(), "../out/word2vec_trained.pt")
 
 
 if __name__ == '__main__':
