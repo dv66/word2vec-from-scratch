@@ -39,17 +39,21 @@ class Word2VecNN(nn.Module):
         )
 
     def forward(self, x):
+        # return nn.functional.normalize(self.hidden(x), p=2, dim=-1)
         return self.hidden(x)
 
-
 def skip_gram_loss(outputs, targets, word2vec: Word2VecDataset):
+    # normalize
+    # for i in range(len(outputs)):
+    #     outputs[i] = nn.functional.normalize(outputs[i], p=2, dim=-1)
+
     losses = torch.zeros(len(outputs)).cuda()
     for i in range(len(outputs)):
         context_word_vector = targets[i]
         hidden_layer_center_word_output_vector = outputs[i]
         # print(hidden_layer_center_word_output_vector)
 
-        first_term = - torch.log2(
+        first_term = torch.log2(
             torch.nn.functional.sigmoid(torch.dot(context_word_vector, hidden_layer_center_word_output_vector)))
         k_negative_samples = word2vec.get_k_negative_samples(k=5)
         second_term = 0.0
@@ -68,11 +72,8 @@ def train(args, model, device, train_loader, optimizer, epoch, word2vec_data):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
-        # print(f"total outputs = {len(output)}")
-        # print(f"output_dim = {len(output[0])}")
-        # print(output)
-        # print(target)
         loss = skip_gram_loss(output, target, word2vec_data)
+        writer.add_scalar("Loss/train", loss.item(), epoch)
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
@@ -90,7 +91,7 @@ def main():
                         help='input batch size for training (default: 64)')
     parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
                         help='input batch size for testing (default: 1000)')
-    parser.add_argument('--epochs', type=int, default=3, metavar='N',
+    parser.add_argument('--epochs', type=int, default=20, metavar='N',
                         help='number of epochs to train (default: 14)')
     parser.add_argument('--lr', type=float, default=1.0, metavar='LR',
                         help='learning rate (default: 1.0)')
@@ -127,22 +128,29 @@ def main():
         transforms.Normalize((0.1307,), (0.3081,))
     ])
 
-    word2vec = Word2VecDataset('../sentences-small.txt')
-    Word2VecDataset.generate_target_context_pairs(3, '../sentences-small.txt', '../target-context.txt')
+    word2vec = Word2VecDataset('../sentences-small-1.txt')
+    Word2VecDataset.generate_target_context_pairs(
+                        window=3,
+                        input_file_path='../sentences-small-1.txt',
+                        output_file_path='../target-context.txt'
+                    )
+
     dataset = SkipGramDataset('../target-context.txt', word2vec)
+
     data_loader = torch.utils.data.DataLoader(
-        dataset, batch_size=10
+        dataset, batch_size=args.batch_size
     )
 
     input_dimension = len(dataset[0][0])
     WORD_VECTOR_DIMENSION = 300
-    LEARNING_RATE = 0.001
+    LEARNING_RATE = 0.01
 
     model = Word2VecNN(input_dimension, WORD_VECTOR_DIMENSION).to(device)
     optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE)
 
     for epoch in range(1, args.epochs + 1):
         train(args, model, device, data_loader, optimizer, epoch, word2vec)
+    writer.flush()
 
     if args.save_model:
         torch.save(model.state_dict(), "word2vec_trained.pt")

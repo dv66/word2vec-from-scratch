@@ -11,7 +11,7 @@ class Word2VecDataset:
         self.distinct_words = self.get_distinct_words(self.file)
         self.vocabulary_size = len(self.distinct_words)
         self.word_index_dict = dict([(self.distinct_words[i], i) for i in range(len(self.distinct_words))])
-        self.unigram_table = self.get_unigram_table_neg_sampling()
+        self.unigram_table = self.get_unigram_table_neg_sampling(smoothing_parameter=3/4)
 
     @staticmethod
     def get_distinct_words(file):
@@ -23,7 +23,7 @@ class Word2VecDataset:
 
         return words
 
-    def get_unigram_table_neg_sampling(self):
+    def get_unigram_table_neg_sampling(self, smoothing_parameter=3/4):
         total_words = len(self.distinct_words)
         word_freq = collections.defaultdict(lambda: 0)
         word_indices = {self.distinct_words[i]: i for i in range(len(self.distinct_words))}
@@ -31,8 +31,8 @@ class Word2VecDataset:
         for word in self.distinct_words:
             word_freq[word] += 1
 
-        alpha = 3 / 4  # smoothing parameter
-        word_prob = {word: (word_freq[word] / total_words) ** alpha for word in self.distinct_words}
+        # smoothing parameter = 3/4 according to Mikolov et al.
+        word_prob = {word: (word_freq[word] / total_words) ** smoothing_parameter for word in self.distinct_words}
 
         unigram_table = [[i] * round(word_prob[self.distinct_words[i]] * total_words) for i in
                          range(len(self.distinct_words))]
@@ -51,7 +51,6 @@ class Word2VecDataset:
                 self.get_one_hot_vector([self.get_negative_sample()])
             )
         return k_samples
-
 
     def get_one_hot_vector(self, wordlist: list):
         vector = np.zeros(self.vocabulary_size)
