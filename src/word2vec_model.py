@@ -17,7 +17,7 @@ class SkipGramDataset(torch.utils.data.Dataset):
         self._file_name = file_name
         self._word2vec = word2vec
         with open(file_name) as f:
-            self._total_data = len(f.readlines()) - 1
+            self._total_data = len(f.readlines())
 
     def __getitem__(self, index):
         line = linecache.getline(self._file_name, index + 1)
@@ -100,6 +100,9 @@ def main():
                         help='how many batches to wait before logging training status')
     parser.add_argument('--save-model', action='store_true', default=True,
                         help='For Saving the current Model')
+    parser.add_argument('--window-size', type=int, default=3,
+                        help='Window size for creating target context pairs'
+                        )
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -121,10 +124,10 @@ def main():
         transforms.Normalize((0.1307,), (0.3081,))
     ])
 
-    word2vec = Word2VecDataset('../out/sentences-small-1.txt')
+    word2vec = Word2VecDataset('../out/sentences-small-2.txt')
     Word2VecDataset.generate_target_context_pairs(
-                        window=3,
-                        input_file_path='../out/sentences-small-1.txt',
+                        window=args.window_size,
+                        input_file_path='../out/sentences-small-2.txt',
                         output_file_path='../out/target-context.txt'
                     )
 
@@ -144,7 +147,7 @@ def main():
     writer.flush()
 
     if args.save_model:
-        torch.save(model.state_dict(), "../out/word2vec_trained.pt")
+        torch.save(model.state_dict(), "../out/word2vec_trained-small-2.pt")
 
 
 if __name__ == '__main__':

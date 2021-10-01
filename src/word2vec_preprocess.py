@@ -16,22 +16,20 @@ class Word2VecDataset:
             self.save_word_data(f'{file_path}.pkl')
         self.vocabulary_size = len(self.distinct_words)
         self.word_index_dict = dict([(self.distinct_words[i], i) for i in range(len(self.distinct_words))])
-        self.unigram_table = self.get_unigram_table_neg_sampling(smoothing_parameter=3/4)
-
+        self.unigram_table = self.get_unigram_table_neg_sampling(smoothing_parameter=3 / 4)
 
     def get_distinct_words(self):
         return self.distinct_words
-
 
     def extract_distinct_words(self):
         for sentence in self.file:
             for word in sentence.strip().split():
                 self.distinct_words.append(word)
+        self.distinct_words = list(set(self.distinct_words))
 
-    def get_unigram_table_neg_sampling(self, smoothing_parameter=3/4):
+    def get_unigram_table_neg_sampling(self, smoothing_parameter=3 / 4):
         total_words = len(self.distinct_words)
         word_freq = collections.defaultdict(lambda: 0)
-        word_indices = {self.distinct_words[i]: i for i in range(len(self.distinct_words))}
 
         for word in self.distinct_words:
             word_freq[word] += 1
@@ -96,6 +94,8 @@ class Word2VecDataset:
             for pair in pairs_str:
                 output_pairs.append(pair)
 
+        random.shuffle(output_pairs)
+
         open(output_file_path, 'w').write('\n'.join(output_pairs))
 
     def save_word_data(self, pickle_file):
@@ -106,11 +106,20 @@ class Word2VecDataset:
             pickle.dump(word_data, f)
 
 
-
-
 if __name__ == '__main__':
     # word2vec = Word2VecDataset('../out/sentences-small-2.txt')
-    word2vec = Word2VecDataset('../out/sentences-small-2.txt.pkl', is_pickle=True)
-    print(len(word2vec.get_distinct_words()))
-    print(word2vec.get_one_hot_vector('স্ন্যাপচ্যাটে'))
+    # word2vec = Word2VecDataset('../out/sentences-small-2.txt.pkl', is_pickle=True)
+    # print(len(word2vec.get_distinct_words()))
+    # print(word2vec.get_one_hot_vector('স্ন্যাপচ্যাটে'))
 
+    word2vec = Word2VecDataset('../out/test.txt')
+    word2vec = Word2VecDataset('../out/test.txt.pkl', is_pickle=True)
+    print(word2vec.get_distinct_words())
+    word2vec.generate_target_context_pairs(window=3, input_file_path='../out/test.txt',
+                                           output_file_path='../out/test-skipgram-data.txt')
+
+    from word2vec_model import SkipGramDataset
+    skipgram_data = SkipGramDataset('../out/test-skipgram-data.txt', word2vec)
+
+    for i in range(len(skipgram_data)):
+        print(skipgram_data[i])
