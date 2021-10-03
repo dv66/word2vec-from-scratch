@@ -1,14 +1,14 @@
 import word2vec_dataset
 import torch
 import pickle
+import numpy as np
+from word2vec_dataset import Word2VecDataset
+from word2vec_model import SkipGramDataset
 
-from src.word2vec_dataset import Word2VecDataset
-from src.word2vec_model import SkipGramDataset
 
 model = torch.load('../out/word2vec_trained-small-2.pt')
-word2vec = word2vec_dataset.Word2VecDataset('../out/sentences-small-2.txt.pkl', is_pickle=True)
+word2vec = word2vec_dataset.Word2VecDataset('../out/backup/sentences-small-2.txt.pkl', is_pickle=True)
 distinct_words = word2vec.get_distinct_words()
-
 
 def get_word_vector(word):
     index = distinct_words.index(word)
@@ -25,18 +25,21 @@ def get_k_most_similar_words(word, k):
         word_similarity.append((similarity, i))
 
     word_similarity = sorted(word_similarity)[::-1][:k]
-
     print(word_similarity)
-
     return [distinct_words[x[1]] for x in word_similarity]
+
+
 
 
 if __name__ == '__main__':
     word_1 = 'বংশোদ্ভূত'
-    # word_2 = 'রাজা'
+    word_2 = 'রাজা'
 
-    # print(distinct_words)
-    # print(get_k_most_similar_words(word_1, k=10))
+    rand_word_idx = np.random.randint(0, len(word2vec.distinct_words), 30)
+    for r in rand_word_idx:
+        reference_word = word2vec.distinct_words[r]
+        print(f"reference : {reference_word}")
+        print(get_k_most_similar_words(reference_word, k=10))
     # cosine_similarity = torch.nn.CosineSimilarity(dim=-1)(get_word_vector(word_1), get_word_vector(word_2)).item()
     # print(f"similarity = {cosine_similarity}")
 

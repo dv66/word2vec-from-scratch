@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
-
+import numpy as np
 from skipgram_dataset import SkipGramDataset
 from word2vec_dataset import Word2VecDataset
 
@@ -28,14 +28,14 @@ class Word2VecNN(nn.Module):
         return self.hidden(x)
 
 
-def skip_gram_loss(data_indices, target_indices, word2vec: Word2VecDataset, model: Word2VecNN):
+def skip_gram_loss(data_indices, target_indices, word2vec: Word2VecDataset, model: Word2VecNN, n_neg_samples: int):
     losses = torch.zeros(len(data_indices)).cuda()
     for i in range(len(data_indices)):
         v_c = model.hidden[0].weight[:, data_indices[i]]
         u = model.hidden[1].weight[target_indices[i]]
         first_term = torch.log2(
             torch.nn.functional.sigmoid(torch.dot(u, v_c)))
-        k_negative_samples_indices = word2vec.get_k_negative_samples(k=5)
+        k_negative_samples_indices = word2vec.get_k_negative_samples(k=n_neg_samples)
         second_term = 0.0
         for neg_sample_index in k_negative_samples_indices:
             neg_sample_embedding_vector = model.hidden[1].weight[neg_sample_index]
@@ -52,15 +52,31 @@ def word_index_to_one_hot(indices, word2vec: Word2VecDataset):
 
     return one_hots
 
-def train(args, model, device, train_loader, optimizer, epoch, word2vec):
+
+def word_similarity_test(model: Word2VecNN, word2vec: Word2VecDataset, num_words, k_similar):
+    word_similarity = []
+    rand_indices = np.random.uniform(0, len(word2vec.distinct_words), num_words)
+    for r in rand_indices:
+        reference_word_vector = model.hidden[0][:, r]
+        for i in range(len(model.hidden[0][0])):
+            vector = model.hidden[0][:, i]
+            similarity = torch.nn.CosineSimilarity(dim=-1)(reference_word_vector, vector).item()
+            word_similarity.append((similarity, i))
+        word_similarity = sorted(word_similarity)[::-1][:k_similar]
+        print(f"reference : {word2vec.distinct_words[r]} \n similar words : ")
+        print([word2vec.distinct_words[x[1]] for x in word_similarity])
+    print("="*50)
+
+
+def train(args, model, device, train_loader, optimizer, epoch, word2vec, n_neg_samples=10):
     model.train()
     for batch_idx, (data_indices, target_indices) in enumerate(train_loader):
         data = word_index_to_one_hot(data_indices, word2vec)
         target = word_index_to_one_hot(target_indices, word2vec)
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
-        output = model(data)
-        loss = skip_gram_loss(data_indices, target_indices, word2vec, model)
+        # output = model(data)
+        loss = skip_gram_loss(data_indices, target_indices, word2vec, model, n_neg_samples)
         # print(loss)
         writer.add_scalar("Loss/train", loss.item(), epoch)
         loss.backward()
@@ -101,6 +117,9 @@ def main():
     parser.add_argument('--window-size', type=int, default=3,
                         help='Window size for creating target context pairs'
                         )
+    parser.add_argument('--n-neg-samples', type=int, required=True,
+                        help='No. of negative samples against per correct pair'
+                        )
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -122,7 +141,7 @@ def main():
         transforms.Normalize((0.1307,), (0.3081,))
     ])
 
-    word2vec = Word2VecDataset('../out/backup/sentences-small-2.txt')
+    word2vec = Word2VecDataset('../out/backup/sentences-small-1.txt')
     dataset = SkipGramDataset(word2vec, window_size=args.window_size)
 
     data_loader = torch.utils.data.DataLoader(
@@ -135,16 +154,15 @@ def main():
     optimizer = optim.SGD(model.parameters(), lr=args.lr)
 
     for epoch in range(1, args.epochs + 1):
-        train(args, model, device, data_loader, optimizer, epoch, word2vec)
+        train(args, model, device, data_loader, optimizer, epoch, word2vec, n_neg_samples=args.n_neg_samples)
     writer.flush()
 
     if args.save_model:
-        torch.save(model.state_dict(), "../out/word2vec_trained-small-2.pt")
+        torch.save(model.state_dict(), "../out/word2vec_trained-small-1.pt")
 
 
 if __name__ == '__main__':
     main()
-# np_one_hot_x = self._word2vec.get_one_hot_vector(x)
-# torch_one_hot_x = torch.from_numpy(np_one_hot_x)
-#
-# return self.hidden(torch_one_hot_x)
+
+
+# python word2vec_model.py --lr=1   --word-vector-dimension=300 --epochs=15 --batch-size=64 --save-model  --window-size=4 --n-neg-samples=10
