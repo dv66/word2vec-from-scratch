@@ -1,3 +1,15 @@
+'''
+
+python word2vec_model.py --lr=1 \
+      --word-vector-dimension=300 \
+      --epochs=15 \
+      --batch-size=64 \
+      --save-model  \
+      --window-size=4 \
+      --n-neg-samples=10
+'''
+
+
 from __future__ import print_function
 import argparse
 import os
@@ -29,6 +41,16 @@ class Word2VecNN(nn.Module):
 
 
 def skip_gram_loss(data_indices, target_indices, word2vec: Word2VecDataset, model: Word2VecNN, n_neg_samples: int):
+    '''
+    https://web.stanford.edu/class/cs224n/readings/cs224n-2019-notes01-wordvecs1.pdf
+    SkipGram objective function by Mikolov et al.
+    :param data_indices: indices of center words
+    :param target_indices: indices of context words
+    :param word2vec: Word2VecDataset object
+    :param model: Word2VecNN model
+    :param n_neg_samples: number of negative samples
+    :return:
+    '''
     losses = torch.zeros(len(data_indices)).cuda()
     for i in range(len(data_indices)):
         v_c = model.hidden[0].weight[:, data_indices[i]]
@@ -75,9 +97,8 @@ def train(args, model, device, train_loader, optimizer, epoch, word2vec, n_neg_s
         target = word_index_to_one_hot(target_indices, word2vec)
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
-        # output = model(data)
+        output = model(data)
         loss = skip_gram_loss(data_indices, target_indices, word2vec, model, n_neg_samples)
-        # print(loss)
         writer.add_scalar("Loss/train", loss.item(), epoch)
         loss.backward()
         optimizer.step()
@@ -165,4 +186,3 @@ if __name__ == '__main__':
     main()
 
 
-# python word2vec_model.py --lr=1   --word-vector-dimension=300 --epochs=15 --batch-size=64 --save-model  --window-size=4 --n-neg-samples=10
