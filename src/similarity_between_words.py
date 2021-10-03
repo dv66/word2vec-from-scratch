@@ -1,9 +1,12 @@
-import word2vec_preprocess
+import word2vec_dataset
 import torch
 import pickle
 
+from src.word2vec_dataset import Word2VecDataset
+from src.word2vec_model import SkipGramDataset
+
 model = torch.load('../out/word2vec_trained-small-2.pt')
-word2vec = word2vec_preprocess.Word2VecDataset('../out/sentences-small-2.txt.pkl', is_pickle=True)
+word2vec = word2vec_dataset.Word2VecDataset('../out/sentences-small-2.txt.pkl', is_pickle=True)
 distinct_words = word2vec.get_distinct_words()
 
 
@@ -33,6 +36,8 @@ if __name__ == '__main__':
     # word_2 = 'রাজা'
 
     # print(distinct_words)
-    print(get_k_most_similar_words(word_1, k=10))
+    # print(get_k_most_similar_words(word_1, k=10))
     # cosine_similarity = torch.nn.CosineSimilarity(dim=-1)(get_word_vector(word_1), get_word_vector(word_2)).item()
     # print(f"similarity = {cosine_similarity}")
+
+

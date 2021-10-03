@@ -1,5 +1,6 @@
 from __future__ import print_function
 import argparse
+import os
 import linecache
 from torch.utils.tensorboard import SummaryWriter
 import torch
@@ -8,26 +9,11 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
-from word2vec_preprocess import Word2VecDataset
+
+from skipgram_dataset import SkipGramDataset
+from word2vec_dataset import Word2VecDataset
 
 writer = SummaryWriter()
-
-class SkipGramDataset(torch.utils.data.Dataset):
-    def __init__(self, file_name, word2vec: Word2VecDataset):
-        self._file_name = file_name
-        self._word2vec = word2vec
-        with open(file_name) as f:
-            self._total_data = len(f.readlines())
-
-    def __getitem__(self, index):
-        line = linecache.getline(self._file_name, index + 1)
-        X, y = line.strip().split()
-        X = self._word2vec.get_one_hot_vector(X)
-        y = self._word2vec.get_one_hot_vector(y)
-        return torch.from_numpy(X), torch.from_numpy(y)
-
-    def __len__(self):
-        return self._total_data
 
 
 class Word2VecNN(nn.Module):
@@ -39,31 +25,43 @@ class Word2VecNN(nn.Module):
         )
 
     def forward(self, x):
-        # return nn.functional.normalize(self.hidden(x), p=2, dim=-1)
         return self.hidden(x)
 
-def skip_gram_loss(outputs, targets, word2vec: Word2VecDataset):
-    losses = torch.zeros(len(outputs)).cuda()
-    for i in range(len(outputs)):
-        context_word_vector = targets[i]
-        hidden_layer_center_word_output_vector = outputs[i]
-        first_term = torch.log2(torch.nn.functional.sigmoid(torch.dot(context_word_vector, hidden_layer_center_word_output_vector)))
-        k_negative_samples = word2vec.get_k_negative_samples(k=5)
+
+def skip_gram_loss(data_indices, target_indices, word2vec: Word2VecDataset, model: Word2VecNN):
+    losses = torch.zeros(len(data_indices)).cuda()
+    for i in range(len(data_indices)):
+        v_c = model.hidden[0].weight[:, data_indices[i]]
+        u = model.hidden[1].weight[target_indices[i]]
+        first_term = torch.log2(
+            torch.nn.functional.sigmoid(torch.dot(u, v_c)))
+        k_negative_samples_indices = word2vec.get_k_negative_samples(k=5)
         second_term = 0.0
-        for neg_sample in k_negative_samples:
-            second_term += torch.log2(nn.functional.sigmoid(- torch.dot(torch.Tensor(neg_sample).cuda(), hidden_layer_center_word_output_vector)))
+        for neg_sample_index in k_negative_samples_indices:
+            neg_sample_embedding_vector = model.hidden[1].weight[neg_sample_index]
+            second_term += torch.log2(nn.functional.sigmoid(
+                - torch.dot(neg_sample_embedding_vector, v_c)))
         losses[i] = - first_term - second_term
 
     return torch.mean(losses)
 
 
-def train(args, model, device, train_loader, optimizer, epoch, word2vec_data):
+def word_index_to_one_hot(indices, word2vec: Word2VecDataset):
+    indices = [int(indices[i].item()) for i in range(len(indices))]
+    one_hots = torch.Tensor([word2vec.get_one_hot_vector(word2vec.get_distinct_words()[x]) for x in indices])
+
+    return one_hots
+
+def train(args, model, device, train_loader, optimizer, epoch, word2vec):
     model.train()
-    for batch_idx, (data, target) in enumerate(train_loader):
+    for batch_idx, (data_indices, target_indices) in enumerate(train_loader):
+        data = word_index_to_one_hot(data_indices, word2vec)
+        target = word_index_to_one_hot(target_indices, word2vec)
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
-        loss = skip_gram_loss(output, target, word2vec_data)
+        loss = skip_gram_loss(data_indices, target_indices, word2vec, model)
+        # print(loss)
         writer.add_scalar("Loss/train", loss.item(), epoch)
         loss.backward()
         optimizer.step()
@@ -124,20 +122,14 @@ def main():
         transforms.Normalize((0.1307,), (0.3081,))
     ])
 
-    word2vec = Word2VecDataset('../out/sentences-small-2.txt')
-    Word2VecDataset.generate_target_context_pairs(
-                        window=args.window_size,
-                        input_file_path='../out/sentences-small-2.txt',
-                        output_file_path='../out/target-context.txt'
-                    )
-
-    dataset = SkipGramDataset('../out/target-context.txt', word2vec)
+    word2vec = Word2VecDataset('../out/backup/sentences-small-2.txt')
+    dataset = SkipGramDataset(word2vec, window_size=args.window_size)
 
     data_loader = torch.utils.data.DataLoader(
         dataset, batch_size=args.batch_size
     )
 
-    input_dimension = len(dataset[0][0])
+    input_dimension = word2vec.get_total_distinct_words()
 
     model = Word2VecNN(input_dimension, args.word_vector_dimension).to(device)
     optimizer = optim.SGD(model.parameters(), lr=args.lr)
@@ -152,3 +144,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+# np_one_hot_x = self._word2vec.get_one_hot_vector(x)
+# torch_one_hot_x = torch.from_numpy(np_one_hot_x)
+#
+# return self.hidden(torch_one_hot_x)

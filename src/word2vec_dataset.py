@@ -8,6 +8,7 @@ class Word2VecDataset:
 
     def __init__(self, file_path, is_pickle=False):
         self.distinct_words = []
+        self.file_path = file_path
         if is_pickle:
             self.distinct_words = pickle.load(open(file_path, 'rb'))['distinct_words']
         else:
@@ -17,6 +18,12 @@ class Word2VecDataset:
         self.vocabulary_size = len(self.distinct_words)
         self.word_index_dict = dict([(self.distinct_words[i], i) for i in range(len(self.distinct_words))])
         self.unigram_table = self.get_unigram_table_neg_sampling(smoothing_parameter=3 / 4)
+
+    def get_file(self):
+        return open(self.file_path)
+
+    def get_total_distinct_words(self):
+        return len(self.distinct_words)
 
     def get_distinct_words(self):
         return self.distinct_words
@@ -44,15 +51,10 @@ class Word2VecDataset:
         return unigram_table
 
     def get_negative_sample(self):
-        negative_sample_index = random.choice(self.unigram_table)
-        return self.distinct_words[negative_sample_index]
+        return random.choice(self.unigram_table)
 
     def get_k_negative_samples(self, k):
-        k_samples = []
-        for i in range(k):
-            k_samples.append(
-                self.get_one_hot_vector(self.get_negative_sample())
-            )
+        k_samples = [self.get_negative_sample() for i in range(k)]
         return k_samples
 
     def get_one_hot_vector(self, word: str):
@@ -86,9 +88,9 @@ class Word2VecDataset:
         return target_context_pairs
 
     @staticmethod
-    def generate_target_context_pairs(window, input_file_path, output_file_path):
+    def generate_target_context_pairs(window, input_file, output_file):
         output_pairs = []
-        for sentence in open(input_file_path):
+        for sentence in input_file:
             sentence = sentence.strip()
             pairs_str = [(w[0] + " " + w[1]) for w in Word2VecDataset.get_target_context_pairs(window, sentence)]
             for pair in pairs_str:
@@ -96,7 +98,8 @@ class Word2VecDataset:
 
         random.shuffle(output_pairs)
 
-        open(output_file_path, 'w').write('\n'.join(output_pairs))
+        output_file.write('\n'.join(output_pairs))
+
 
     def save_word_data(self, pickle_file):
         word_data = {
