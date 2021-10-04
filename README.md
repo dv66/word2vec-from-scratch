@@ -1,5 +1,5 @@
 # word2vec-from-scratch
-Word2VecDataset model implementation from scratch.
+Word2Vec model implementation from scratch using PyTorch.
 
 ## Dependencies Installation
 * Install all dependecies.
