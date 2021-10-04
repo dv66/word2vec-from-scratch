@@ -1,12 +1,15 @@
 '''
-
-python word2vec_model.py --lr=1 \
-      --word-vector-dimension=300 \
-      --epochs=15 \
-      --batch-size=64 \
-      --save-model  \
-      --window-size=4 \
-      --n-neg-samples=10
+# Sample Usage::
+ 
+python model.py \
+--lr=1 \
+--word-vector-dimension=300 \
+--epochs=15 \
+--batch-size=256 \
+--model-name=../test-model.pt \
+--window-size=5 \
+--n-neg-samples=10 \
+--gamma=0.7
 '''
 
 
@@ -93,18 +96,15 @@ def word_similarity_test(model: Word2VecNN, word2vec: Word2VecDataset, num_words
 def train(args, model, device, train_loader, optimizer, epoch, word2vec, n_neg_samples=10):
     model.train()
     for batch_idx, (data_indices, target_indices) in enumerate(train_loader):
-        data = word_index_to_one_hot(data_indices, word2vec)
-        target = word_index_to_one_hot(target_indices, word2vec)
-        data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
-        output = model(data)
+        # output = model(data)
         loss = skip_gram_loss(data_indices, target_indices, word2vec, model, n_neg_samples)
         writer.add_scalar("Loss/train", loss.item(), epoch)
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
+                epoch, batch_idx * len(data_indices), len(train_loader.dataset),
                        100. * batch_idx / len(train_loader), loss.item()))
             if args.dry_run:
                 break
@@ -121,9 +121,9 @@ def main():
                         help='input batch size for testing (default: 1000)')
     parser.add_argument('--epochs', type=int, default=20, metavar='N',
                         help='number of epochs to train (default: 14)')
-    parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
+    parser.add_argument('--lr', type=float, default=0.01, required=True,
                         help='learning rate (default: 1.0)')
-    parser.add_argument('--gamma', type=float, default=0.7, metavar='M',
+    parser.add_argument('--gamma', type=float, default=0.7, required=True,
                         help='Learning rate step gamma (default: 0.7)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
@@ -133,8 +133,8 @@ def main():
                         help='random seed (default: 1)')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='how many batches to wait before logging training status')
-    parser.add_argument('--save-model', action='store_true', default=True,
-                        help='For Saving the current Model')
+    parser.add_argument('--model-name', type=str, required=True,
+                        help='Filename for saving the current Model')
     parser.add_argument('--window-size', type=int, default=3,
                         help='Window size for creating target context pairs'
                         )
@@ -157,12 +157,7 @@ def main():
         train_kwargs.update(cuda_kwargs)
         test_kwargs.update(cuda_kwargs)
 
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))
-    ])
-
-    word2vec = Word2VecDataset('../out/backup/sentences-small-1.txt')
+    word2vec = Word2VecDataset('../out/original_corpus-cleaned-20k.en')
     dataset = SkipGramDataset(word2vec, window_size=args.window_size)
 
     data_loader = torch.utils.data.DataLoader(
@@ -173,13 +168,16 @@ def main():
 
     model = Word2VecNN(input_dimension, args.word_vector_dimension).to(device)
     optimizer = optim.SGD(model.parameters(), lr=args.lr)
+    scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
 
     for epoch in range(1, args.epochs + 1):
         train(args, model, device, data_loader, optimizer, epoch, word2vec, n_neg_samples=args.n_neg_samples)
+        torch.save(model.state_dict(), f"snapshot-{epoch}-"+args.model_name)
+        scheduler.step()
     writer.flush()
 
     if args.save_model:
-        torch.save(model.state_dict(), "../out/word2vec_trained-small-1.pt")
+        torch.save(model.state_dict(), f"final-{args.model_name}")
 
 
 if __name__ == '__main__':
