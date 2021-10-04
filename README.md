@@ -1,9 +1,7 @@
 # word2vec-from-scratch
 Word2VecDataset model implementation from scratch.
 
-## Training
-
-### Setup
+## Dependencies Installation
 * Install all dependecies.
  ```bash
 pip install -r requirements.txt
@@ -13,14 +11,14 @@ pip install -r requirements.txt
 pip install torch==1.9.1+cu111 torchvision==0.10.1+cu111 torchaudio==0.9.1 -f https://download.pytorch.org/whl/torch_stable.html
 ```
 
-### Usage
+## Training
 
 ```bash
 cd src/
 python model.py
 usage: model.py [-h] --word-vector-dimension WORD_VECTOR_DIMENSION [--batch-size N] [--test-batch-size N] [--epochs N] --lr LR --gamma
                 GAMMA [--no-cuda] [--dry-run] [--seed S] [--log-interval N] --model-name MODEL_NAME [--window-size WINDOW_SIZE]
-                --n-neg-samples N_NEG_SAMPLES
+                --n-neg-samples N_NEG_SAMPLES --corpus-file CORPUS_FILE
 
 Word2VecDataset Implementation from scratch
 
@@ -43,5 +41,10 @@ optional arguments:
                         Window size for creating target context pairs
   --n-neg-samples N_NEG_SAMPLES
                         No. of negative samples against per correct pair
+  --corpus-file CORPUS_FILE
+                        Text corpus file
 ```
+## Show K Similar Words
+```bash
 
+```
