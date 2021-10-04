@@ -1,6 +1,6 @@
 '''
 # Sample Usage::
- 
+
 python model.py \
 --lr=1 \
 --word-vector-dimension=300 \
@@ -9,7 +9,8 @@ python model.py \
 --model-name=../test-model.pt \
 --window-size=5 \
 --n-neg-samples=10 \
---gamma=0.7
+--gamma=0.7 \
+--corpus-file=../original_corpus-cleaned-20k.en
 '''
 
 
@@ -141,6 +142,9 @@ def main():
     parser.add_argument('--n-neg-samples', type=int, required=True,
                         help='No. of negative samples against per correct pair'
                         )
+    parser.add_argument('--corpus-file', type=str, required=True,
+                        help='Text corpus file'
+                        )
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -157,7 +161,7 @@ def main():
         train_kwargs.update(cuda_kwargs)
         test_kwargs.update(cuda_kwargs)
 
-    word2vec = Word2VecDataset('../out/original_corpus-cleaned-20k.en')
+    word2vec = Word2VecDataset(args.corpus_file)
     dataset = SkipGramDataset(word2vec, window_size=args.window_size)
 
     data_loader = torch.utils.data.DataLoader(
