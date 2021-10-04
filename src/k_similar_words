@@ -9,7 +9,7 @@ parser.add_argument('--vocabulary-pickle-file', type=str, required=True,
                     help='Pickle file for vocabulary corresponding to trained model')
 parser.add_argument('--reference-word', type=str, required=True,
                     help='Reference word for similar words')
-parser.add_argument('--k', type=str, required=True,
+parser.add_argument('--k', type=int, required=True,
                     help='Number of similar words to print')
 
 args = parser.parse_args()
