@@ -1,5 +1,9 @@
 # word2vec-from-scratch
 Word2Vec model implementation from scratch using PyTorch.
+### References: 
+* [Distributed representations of words and phrases and their compositionality](https://proceedings.neurips.cc/paper/2013/file/9aa42b31882ec039965f3c4923ce901b-Paper.pdf)
+* [Efficient estimation of word representations in vector space](https://arxiv.org/pdf/1301.3781.pdf%C3%AC%E2%80%94%20%C3%AC%E2%80%9E%C5%93)
+* [Stanford CS224n: Natural Language Processing Notes](http://web.stanford.edu/class/cs224n/readings/cs224n-2019-notes01-wordvecs1.pdf)
 
 ## Dependencies Installation
 * Install all dependecies.
