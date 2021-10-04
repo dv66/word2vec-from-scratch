@@ -68,6 +68,16 @@ optional arguments:
 ```
 Example:
 ```bash
+$ python k_similar_words.py \
+--model-file ../word2vec_trained-original_corpus-cleaned-20k.en-5.pt \
+--vocabulary-pickle-file ../frozen-models/original_corpus-cleaned-20k.en.pkl \
+--reference-word EUROPE --k 20
+
+[(1.0, 14633), (0.9287238121032715, 2509), (0.8907703161239624, 616), (0.8868861198425293, 20203), (0.8854075074195862, 7315), (0.8827059268951416, 9474), (0.8780403137207031, 5507), (0.8772376775741577, 6228), (0.8763847947120667, 12517), (0.8718013763427734, 20797), (0.8693404197692871, 9041), (0.8657873272895813, 1133), (0.8649973273277283, 14088), (0.863677978515625, 2829), (0.8599470257759094, 6965), (0.8598442673683167, 18152), (0.8568169474601746, 16630), (0.8566083312034607, 19833), (0.8513906598091125, 8237), (0.8508289456367493, 16043)]
+['EUROPE', 'ASIA', 'EUROPEAN', 'PARTS', 'INDIA', 'AUSTRALIA', 'AFRICA', 'WESTERN', 'CHINA', 'AMERICA', 'MIDDLE', 'EAST', 'EVOLVED', 'LANDS', 'RULED', 'CHARACTERISED', 'AFRICAN', 'MERCHANTS', 'KINGDOMS', 'AFRO']
+
+
+
 $ python k_similar_words.py --model-file=../frozen-models/word2vec_trained-original_corpus-cleaned-20k.en-3.pt \
 --vocabulary-pickle-file=../frozen-models/original_corpus-cleaned-20k.en.pkl \
 --reference-word SCARED \
