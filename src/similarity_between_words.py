@@ -1,3 +1,13 @@
+'''
+# Sample Usage:
+
+python similarity_between_words.py \
+--model-file ../frozen-models/word2vec_trained-original_corpus-cleaned-20k.en-3.pt \
+--vocabulary-pickle-file ../frozen-models/original_corpus-cleaned-20k.en.pkl \
+--reference-word-1 APPLE \
+--reference-word-2 ORANGE
+
+'''
 import torch
 import word2vec_dataset
 import argparse
