@@ -91,3 +91,43 @@ $ python k_similar_words.py --model-file=../frozen-models/word2vec_trained-origi
 
 
 ```
+
+## Cosine Similarity Between Words
+```bash
+python similarity_between_words.py -h
+usage: similarity_between_words.py [-h] --model-file MODEL_FILE --vocabulary-pickle-file VOCABULARY_PICKLE_FILE --reference-word-1 REFERENCE_WORD_1 --reference-word-2
+                                   REFERENCE_WORD_2
+
+Print cosine similarity between 2 word vectors.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --model-file MODEL_FILE
+                        Trained word2vec model file path
+  --vocabulary-pickle-file VOCABULARY_PICKLE_FILE
+                        Pickle file for vocabulary corresponding to trained model
+  --reference-word-1 REFERENCE_WORD_1
+                        Reference word #1 for similarity check.
+  --reference-word-2 REFERENCE_WORD_2
+                        Reference word #2 for similarity check.
+
+```
+Examples:
+```bash
+$ python similarity_between_words.py \
+--model-file ../frozen-models/word2vec_trained-original_corpus-cleaned-20k.en-3.pt \
+--vocabulary-pickle-file ../frozen-models/original_corpus-cleaned-20k.en.pkl \
+--reference-word-1 FIFTEEN \
+--reference-word-2 GOVERNMENT
+
+0.7863131761550903
+
+
+$ python similarity_between_words.py \
+--model-file ../frozen-models/word2vec_trained-original_corpus-cleaned-20k.en-3.pt \
+--vocabulary-pickle-file ../frozen-models/original_corpus-cleaned-20k.en.pkl \
+--reference-word-1 APPLE \
+--reference-word-2 ORANGE
+
+0.9818301796913147
+```
