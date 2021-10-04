@@ -64,7 +64,11 @@ optional arguments:
 ```
 Example:
 ```bash
-$ python k_similar_words.py --model-file=../frozen-models/word2vec_trained-original_corpus-cleaned-20k.en-1.pt  --vocabulary-pickle-file=../frozen-models/original_corpus-cleaned-20k.en.pkl --reference-word SCARED --k=10
+$ python k_similar_words.py \
+--model-file=../frozen-models/word2vec_trained-original_corpus-cleaned-20k.en-1.pt \
+--vocabulary-pickle-file=../frozen-models/original_corpus-cleaned-20k.en.pkl \
+--reference-word SCARED \
+--k=10
 
 [(1.0, 18098), (0.9966104626655579, 3463), (0.9966039061546326, 250), (0.9965393543243408, 6128), (0.9964630603790283, 14955), (0.9964352250099182, 11893), (0.9964273571968079, 17516), (0.9964168071746826, 21240), (0.9964138269424438, 6685), (0.9964002966880798, 1262)]
 ['SCARED', 'LONELY', 'ANYWHERE', 'VILLAGER', 'DRAWERS', 'OBSERVE', 'TENSION', 'PUBLISH', 'PROCLAIMED', 'INFORMED']
