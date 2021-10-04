@@ -12,7 +12,7 @@ pip install torch==1.9.1+cu111 torchvision==0.10.1+cu111 torchaudio==0.9.1 -f ht
 ```
 
 ## Training
-
+After training, a model file (.pt) and a vocabulary pickle file (.pkl) will be generated.
 ```bash
 cd src/
 python model.py
@@ -46,5 +46,26 @@ optional arguments:
 ```
 ## Show K Similar Words
 ```bash
+python k_similar_words.py -h
+usage: k_similar_words.py [-h] --model-file MODEL_FILE --vocabulary-pickle-file VOCABULARY_PICKLE_FILE --reference-word REFERENCE_WORD --k K
 
+Print K Similar Words for a given word
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --model-file MODEL_FILE
+                        Trained word2vec model file path
+  --vocabulary-pickle-file VOCABULARY_PICKLE_FILE
+                        Pickle file for vocabulary corresponding to trained model
+  --reference-word REFERENCE_WORD
+                        Reference word for similar words
+  --k K                 Number of similar words to print
+
+```
+Example:
+```bash
+$ python k_similar_words.py --model-file=../frozen-models/word2vec_trained-original_corpus-cleaned-20k.en-1.pt  --vocabulary-pickle-file=../frozen-models/original_corpus-cleaned-20k.en.pkl --reference-word SCARED --k=10
+
+[(1.0, 18098), (0.9966104626655579, 3463), (0.9966039061546326, 250), (0.9965393543243408, 6128), (0.9964630603790283, 14955), (0.9964352250099182, 11893), (0.9964273571968079, 17516), (0.9964168071746826, 21240), (0.9964138269424438, 6685), (0.9964002966880798, 1262)]
+['SCARED', 'LONELY', 'ANYWHERE', 'VILLAGER', 'DRAWERS', 'OBSERVE', 'TENSION', 'PUBLISH', 'PROCLAIMED', 'INFORMED']
 ```
