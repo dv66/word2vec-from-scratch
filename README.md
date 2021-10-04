@@ -35,7 +35,7 @@ optional arguments:
   --dry-run             quickly check a single pass
   --seed S              random seed (default: 1)
   --log-interval N      how many batches to wait before logging training status
-  --model-name MODEL_NAME
+  --model-file MODEL_FILE
                         Filename for saving the current Model
   --window-size WINDOW_SIZE
                         Window size for creating target context pairs
